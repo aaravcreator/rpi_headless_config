@@ -539,7 +539,7 @@ def _do_reset():
     scan_networks()  # radio is free after AP teardown
     start_ap()       # Flask already running, just bring AP up
     #run server too
-    app.run(host="0.0.0.0", port=PORTAL_PORT, debug=False, threaded=True, use_reloader=False)
+  
 
 
 def setup_gpio():
