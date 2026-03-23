@@ -23,7 +23,7 @@ A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberr
 ### Dependencies
 
 - `flask` - Web framework for the portal
-- `RPi.GPIO` - GPIO control for button and LED
+- `rpi-lgpio` - GPIO control for button and LED
 - `network-manager` - Wi-Fi management (pre-installed on Bookworm)
 
 ## Installation

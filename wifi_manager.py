@@ -607,6 +607,7 @@ def main():
     signal.signal(signal.SIGINT,  shutdown)
 
     setup_gpio()
+    time.sleep(15)  # let system settle, NM start, etc.
 
     if is_connected():
         current = get_saved_ssid()

@@ -90,8 +90,8 @@ if [ "$USE_VENV" = true ]; then
 
     heading "Installing dependencies into venv"
     "$PIP_BIN" install --upgrade pip
-    "$PIP_BIN" install flask RPi.GPIO
-    info "flask and RPi.GPIO installed into venv"
+    "$PIP_BIN" install flask rpi-lgpio
+    info "flask and rpi-lgpio installed into venv"
 
 else
     # ── Check/install deps for system or custom python ────────────────────────
