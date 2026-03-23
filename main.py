@@ -153,7 +153,6 @@ PORTAL_HTML = """<!DOCTYPE html>
   <button class="submit" id="connectBtn" onclick="doConnect()">Connect</button>
   <div class="msg" id="msg"></div>
 </div>
-
 <script>
 const ssidEl    = document.getElementById('ssid');
 const passEl    = document.getElementById('password');
@@ -175,9 +174,9 @@ async function scanNetworks() {
     } else {
       ssidEl.innerHTML = nets.map(n => {
         networkMeta[n.ssid] = n;
-        const bars  = signalBars(n.signal);
-        const lock  = n.secure ? '<span class="lock">🔒</span>' : '<span class="open">open</span>';
-        return `<option value="${esc(n.ssid)}">${esc(n.ssid)}  ${bars} ${n.signal}dBm</option>`;
+        const bars = signalBars(n.signal);
+        const lock = n.secure ? '🔒 ' : '';
+        return `<option value="${esc(n.ssid)}">${lock}${esc(n.ssid)}  ${bars} ${n.signal}%</option>`;
       }).join('');
     }
   } catch {
@@ -191,11 +190,11 @@ function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function signalBars(dbm) {
-  const d = parseInt(dbm) || -90;
-  if (d > -55) return '▂▄▆█';
-  if (d > -67) return '▂▄▆·';
-  if (d > -75) return '▂▄··';
+function signalBars(signal) {
+  const s = parseInt(signal) || 0;
+  if (s >= 75) return '▂▄▆█';
+  if (s >= 50) return '▂▄▆·';
+  if (s >= 25) return '▂▄··';
   return '▂···';
 }
 
@@ -247,6 +246,7 @@ async function doConnect() {
 }
 
 scanNetworks();
+
 </script>
 </body>
 </html>"""
