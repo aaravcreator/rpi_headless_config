@@ -271,55 +271,53 @@ def captive():
     return redirect(f"http://{AP_IP}/", code=302)
 
 
-@app.route("/scan")
-def scan():
-    """Return list of visible networks via nmcli."""
+_cached_networks = []
+
+def scan_networks():
+    """Scan for networks while radio is free (call before start_ap)."""
+    global _cached_networks
+    log.info("Scanning for networks…")
     try:
-        # Force a fresh scan first
-        nmcli("dev wifi rescan ifname wlan0", check=False, timeout=8)
-        time.sleep(2)
+        nmcli(f"dev wifi rescan ifname {AP_INTERFACE}", check=False, timeout=8)
+        time.sleep(3)
 
         result = nmcli(
-            "dev wifi list ifname wlan0 --fields SSID,SIGNAL,SECURITY",
+            f"dev wifi list ifname {AP_INTERFACE} --fields SSID,SIGNAL,SECURITY",
             check=False
         )
         networks = []
         seen = set()
-        for line in result.stdout.splitlines()[1:]:  # skip header
-            parts = line.strip().rsplit(None, 2)
-            if len(parts) < 2:
+        for line in result.stdout.splitlines()[1:]:
+            ssid = line[:33].strip()
+            if not ssid or ssid == "--" or ssid in seen or ssid == AP_SSID:
                 continue
-            ssid = line[:33].strip()  # SSID column is first 33 chars
-            if not ssid or ssid == "--" or ssid in seen:
-                continue
-            # Parse signal and security from end of line
             cols = line.split()
             try:
-                signal = int(cols[-2])
+                signal   = int(cols[-2])
                 security = cols[-1] if cols[-1] != "--" else ""
             except (ValueError, IndexError):
-                signal = 0
+                signal   = 0
                 security = ""
-
-            # Convert 0-100 nmcli signal to approximate dBm
-            dbm = -100 + (signal // 2)
-
             seen.add(ssid)
-            # Skip our own AP SSID from the list
-            if ssid == AP_SSID:
-                continue
             networks.append({
                 "ssid":   ssid,
-                "signal": dbm,
+                "signal": -100 + (signal // 2),
                 "secure": bool(security),
             })
 
         networks.sort(key=lambda x: x["signal"], reverse=True)
-        return jsonify(networks)
+        _cached_networks = networks
+        log.info(f"Found {len(networks)} networks")
 
     except Exception as e:
         log.error(f"Scan error: {e}")
-        return jsonify([])
+
+
+@app.route("/scan")
+def scan():
+    return jsonify(_cached_networks)
+
+
 
 
 @app.route("/connect", methods=["POST"])
@@ -540,7 +538,8 @@ def _do_reset():
     stop_ap()
     delete_saved_wifi_connections()
     time.sleep(1)
-    start_ap()
+    scan_networks()  # radio is free after AP teardown
+    start_ap()       # Flask already running, just bring AP up
     #run server too
     app.run(host="0.0.0.0", port=PORTAL_PORT, debug=False, threaded=True, use_reloader=False)
 
@@ -589,13 +588,14 @@ def main():
         current = get_saved_ssid()
         log.info(f"Already connected ({current}) — monitoring button for reset")
         led_pattern("connected")
-        # Stay alive to handle button presses
-        while True:
-            time.sleep(1)
     else:
         log.info("No Wi-Fi — starting captive portal")
-        start_ap()
-        app.run(host="0.0.0.0", port=PORTAL_PORT, debug=False, threaded=True, use_reloader=False)
+        scan_networks()  # scan while radio is free
+        start_ap()       # then bring AP up
+
+    # Always run Flask — portal must be ready for button reset at any time
+    app.run(host="0.0.0.0", port=PORTAL_PORT, debug=False, threaded=True, use_reloader=False)
+
 
 
 if __name__ == "__main__":
