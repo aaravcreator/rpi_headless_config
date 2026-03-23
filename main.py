@@ -282,7 +282,7 @@ def scan_networks():
         time.sleep(3)
 
         result = nmcli(
-            f"dev wifi list ifname {AP_INTERFACE} --fields SSID,SIGNAL,SECURITY",
+            f"--fields SSID,SIGNAL,SECURITY dev wifi list ifname {AP_INTERFACE}",
             check=False
         )
         networks = []
