@@ -541,17 +541,23 @@ def _do_reset():
   
 
 
+def _on_button_event(channel):
+    if GPIO.input(channel) == GPIO.LOW:
+        _on_press(channel)
+    else:
+        _on_release(channel)
+
+
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    # RPi.GPIO doesn't support both FALLING and RISING on the same pin
-    # in one add_event_detect call — use BOTH with the same callback and
-    # track state manually.
+    GPIO.remove_event_detect(BUTTON_PIN)  # clear stale detection from previous run
     GPIO.add_event_detect(
-        BUTTON_PIN, GPIO.BOTH,
-        callback=lambda ch: _on_press(ch) if not GPIO.input(ch) else _on_release(ch),
+        BUTTON_PIN,
+        GPIO.BOTH,
+        callback=_on_button_event,
         bouncetime=50,
     )
 
@@ -560,7 +566,6 @@ def setup_gpio():
         GPIO.output(LED_PIN, GPIO.LOW)
 
     log.info(f"GPIO ready — reset button on BCM {BUTTON_PIN} (hold {BUTTON_HOLD_SEC}s)")
-
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
