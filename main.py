@@ -541,6 +541,8 @@ def _do_reset():
     delete_saved_wifi_connections()
     time.sleep(1)
     start_ap()
+    #run server too
+    app.run(host="0.0.0.0", port=PORTAL_PORT, debug=False, threaded=True, use_reloader=False)
 
 
 def setup_gpio():
