@@ -551,22 +551,44 @@ def _on_button_event(channel):
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
+
+    # full cleanup of this pin before setting up
+    try:
+        GPIO.remove_event_detect(BUTTON_PIN)
+    except Exception:
+        pass
+    try:
+        GPIO.cleanup(BUTTON_PIN)
+    except Exception:
+        pass
+
     GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    GPIO.remove_event_detect(BUTTON_PIN)  # clear stale detection from previous run
-    GPIO.add_event_detect(
-        BUTTON_PIN,
-        GPIO.BOTH,
-        callback=_on_button_event,
-        bouncetime=50,
-    )
+    try:
+        GPIO.add_event_detect(
+            BUTTON_PIN,
+            GPIO.BOTH,
+            callback=_on_button_event,
+            bouncetime=50,
+        )
+    except RuntimeError as e:
+        log.warning(f"add_event_detect failed ({e}) — retrying after full cleanup")
+        GPIO.cleanup()
+        time.sleep(1)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(
+            BUTTON_PIN,
+            GPIO.BOTH,
+            callback=_on_button_event,
+            bouncetime=50,
+        )
 
     if LED_PIN is not None:
         GPIO.setup(LED_PIN, GPIO.OUT)
         GPIO.output(LED_PIN, GPIO.LOW)
 
     log.info(f"GPIO ready — reset button on BCM {BUTTON_PIN} (hold {BUTTON_HOLD_SEC}s)")
-
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def shutdown(sig, frame):

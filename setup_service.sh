@@ -130,7 +130,7 @@ heading "Creating systemd service"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Headless Wi-Fi Setup Manager
-After=NetworkManager.service
+After=NetworkManager.service sysinit.target local-fs.target
 Wants=NetworkManager.service
 
 [Service]
@@ -138,7 +138,9 @@ Type=simple
 ExecStart=${PYTHON_BIN} ${INSTALL_BIN}
 WorkingDirectory=${INSTALL_DIR}
 Restart=on-failure
-RestartSec=5
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=wifi-manager
