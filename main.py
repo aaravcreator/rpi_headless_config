@@ -386,17 +386,16 @@ def delete_saved_wifi_connections():
 
 
 def connect_to_wifi(ssid, password):
-    """
-    Stop the AP, attempt nmcli connection, reopen portal on failure.
-    Runs in a background thread.
-    """
-    time.sleep(1.5)   # let the HTTP /connect response reach the browser
+    time.sleep(1.5)  # let HTTP response reach browser
     stop_ap()
-    time.sleep(1)
+    time.sleep(1)    # let radio settle into station mode
+
+    # rescan before connect — required on single-band chip
+    log.info("Rescanning before connect…")
+    nmcli(f"dev wifi rescan ifname {AP_INTERFACE}", check=False, timeout=8)
+    time.sleep(3)    # wait for scan cache to populate
 
     log.info(f"Attempting to connect to '{ssid}'…")
-
-    # Delete any previous connection with the same SSID to avoid conflicts
     nmcli(f'con delete "{ssid}"', check=False)
 
     if password:
@@ -422,10 +421,9 @@ def connect_to_wifi(ssid, password):
         err = result.stderr.strip() or result.stdout.strip()
         log.warning(f"Failed to connect to '{ssid}': {err}")
         log.info("Reopening captive portal…")
-        # Remove the failed profile so it doesn't auto-retry
         nmcli(f'con delete "{ssid}"', check=False)
+        scan_networks()  # rescan while radio is free before AP comes back up
         start_ap()
-
 
 # ─── AP mode via NetworkManager ───────────────────────────────────────────────
 
