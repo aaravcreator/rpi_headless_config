@@ -274,7 +274,6 @@ def captive():
 _cached_networks = []
 
 def scan_networks():
-    """Scan for networks while radio is free (call before start_ap)."""
     global _cached_networks
     log.info("Scanning for networks…")
     try:
@@ -282,27 +281,28 @@ def scan_networks():
         time.sleep(3)
 
         result = nmcli(
-            f"--fields SSID dev wifi list ifname {AP_INTERFACE}",
+            f"--fields SSID,SIGNAL,SECURITY dev wifi list ifname {AP_INTERFACE}",
             check=False
         )
         networks = []
         seen = set()
-        for line in result.stdout.splitlines()[1:]:
-            ssid = line[:33].strip()
+        for line in result.stdout.splitlines()[1:]:  # skip header
+            cols = line.split()
+            if len(cols) < 2:
+                continue
+            # last col = SECURITY, second last = SIGNAL, rest = SSID
+            security = cols[-1]
+            signal   = cols[-2]
+            ssid     = " ".join(cols[:-2])
+
             if not ssid or ssid == "--" or ssid in seen or ssid == AP_SSID:
                 continue
-            cols = line.split()
-            try:
-                signal   = int(cols[-2])
-                security = cols[-1] if cols[-1] != "--" else ""
-            except (ValueError, IndexError):
-                signal   = 0
-                security = ""
+
             seen.add(ssid)
             networks.append({
                 "ssid":   ssid,
-                "signal": -100 + (signal // 2),
-                "secure": bool(security),
+                "signal": int(signal) if signal.isdigit() else 0,  # keep 0-100 as-is
+                "secure": security != "--",
             })
 
         networks.sort(key=lambda x: x["signal"], reverse=True)
@@ -311,7 +311,6 @@ def scan_networks():
 
     except Exception as e:
         log.error(f"Scan error: {e}")
-
 
 @app.route("/scan")
 def scan():
