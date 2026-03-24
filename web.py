@@ -35,6 +35,22 @@ def captive():
 def scan():
     return jsonify(get_cached_networks())
 
+@app.route("/connect", methods=["POST"])
+def connect_route():
+    data     = request.get_json() or {}
+    ssid     = data.get("ssid", "").strip()
+    password = data.get("password", "").strip()
+
+    if not ssid:
+        return jsonify({"status": "error", "message": "No SSID provided."})
+
+    log.info(f"Connect request → {ssid}")
+
+    # Fire connection attempt in background so HTTP response reaches browser
+    threading.Thread(target=connect_to_wifi, args=(ssid, password), daemon=True).start()
+    return jsonify({"status": "ok"})
+
+
 @app.route("/pi_innov.jpeg")
 def logo():
     return send_from_directory('.', 'pi_innov.jpeg')
