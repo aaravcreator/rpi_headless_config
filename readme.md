@@ -13,6 +13,19 @@ A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberr
 - **Systemd Service**: Runs as a background service that starts on boot
 - **NetworkManager Integration**: Uses `nmcli` for reliable Wi-Fi management
 
+## Project Structure
+
+The project is modularized for maintainability:
+
+- `wifi_manager.py` - Main entry point and orchestration
+- `config.py` - Configuration constants
+- `wifi.py` - NetworkManager operations and Wi-Fi management
+- `gpio.py` - GPIO handling for button and LED
+- `web.py` - Flask web application and routes
+- `portal.html` - HTML template for the captive portal
+- `setup_service.sh` - Installation script
+- `requirements.txt` - Python dependencies
+
 ## Requirements
 
 - Raspberry Pi with Wi-Fi (e.g., Zero 2 W, 3B+, 4B)
@@ -23,7 +36,7 @@ A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberr
 ### Dependencies
 
 - `flask` - Web framework for the portal
-- `rpi-lgpio` - GPIO control for button and LED
+- `RPi.GPIO` - GPIO control for button and LED
 - `network-manager` - Wi-Fi management (pre-installed on Bookworm)
 
 ## Installation
@@ -36,7 +49,7 @@ A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberr
    sudo bash setup_service.sh
    ```
 
-   The script will:
+   The script will first ask whether to install or uninstall the service. For installation, it will:
    - Prompt for Python environment choice (system, virtualenv, or custom)
    - Install required dependencies
    - Copy files to `/opt/wifi_manager/`
@@ -47,6 +60,25 @@ A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberr
    ```bash
    sudo reboot
    ```
+
+## Uninstallation
+
+To remove the Wi-Fi Manager service completely:
+
+1. Run the setup script again:
+
+   ```bash
+   sudo bash setup_service.sh
+   ```
+
+2. Choose option 2 (Uninstall service) when prompted.
+
+   The script will:
+   - Stop and disable the systemd service
+   - Remove the service file
+   - Delete the installation directory (`/opt/wifi_manager/`)
+   - Remove the log file (`/var/log/wifi_manager.log`)
+   - Reload systemd
 
 ## Usage
 
@@ -72,7 +104,7 @@ A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberr
 
 ## Configuration
 
-Edit the top of `main.py` to customize:
+Edit `config.py` to customize:
 
 - `BUTTON_PIN`: GPIO pin for reset button (default: 17)
 - `BUTTON_HOLD_SEC`: Seconds to hold button for reset (default: 3)
@@ -118,14 +150,14 @@ sudo systemctl restart wifi-manager
 To run manually for testing:
 
 ```bash
-sudo python3 main.py
+sudo python3 wifi_manager.py
 ```
 
 For development with auto-restart:
 
 ```bash
 sudo pip3 install flask RPi.GPIO
-sudo python3 main.py
+sudo python3 wifi_manager.py
 ```
 
 ## License

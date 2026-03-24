@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Device Wi-Fi Setup</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f5; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .card {
+    background: #fff; border-radius: 16px; padding: 36px 28px;
+    max-width: 420px; width: 100%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  .icon {
+    width: 80px; height: 80px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+    background: #fff; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .icon img {
+    width: 100%; height: 100%; object-fit: contain;
+  }
+  .branding {
+    text-align: center; margin-bottom: 20px; font-size: 12px; color: #6b7280;
+  }
+  .branding .brand-name {
+    font-weight: 600; color: #7c3aed; font-size: 14px;
+  }
+  .branding .powered-by {
+    font-size: 11px; color: #9ca3af; margin-top: 2px;
+  }
+  h1 { font-size: 20px; font-weight: 600; color: #111; text-align: center; margin-bottom: 6px; }
+  .sub { font-size: 14px; color: #6b7280; text-align: center; margin-bottom: 28px; }
+  label { font-size: 13px; font-weight: 500; color: #374151; display: block; margin-bottom: 6px; }
+  select, input {
+    width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb;
+    border-radius: 10px; font-size: 15px; color: #111;
+    background: #fafafa; outline: none; transition: border-color .15s;
+    appearance: none;
+  }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+           background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  select:focus, input:focus { border-color: #7c3aed; background: #fff; }
+  .field { margin-bottom: 18px; }
+  .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .scan-btn {
+    font-size: 12px; color: #7c3aed; cursor: pointer; background: none;
+    border: none; padding: 0; font-weight: 500;
+  }
+  .scan-btn:hover { text-decoration: underline; }
+  .pass-wrap { position: relative; }
+  .pass-wrap input { padding-right: 44px; }
+  .eye {
+    position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; color: #9ca3af; font-size: 17px; user-select: none;
+    background: none; border: none; padding: 0; line-height: 1;
+  }
+  .signal { font-size: 11px; color: #9ca3af; }
+  .lock   { font-size: 11px; color: #d1d5db; margin-left: 4px; }
+  .open   { font-size: 11px; color: #6ee7b7; margin-left: 4px; }
+  .submit {
+    width: 100%; padding: 12px; background: #7c3aed; color: #fff;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 500;
+    cursor: pointer; transition: background .15s; margin-top: 4px;
+  }
+  .submit:hover:not(:disabled) { background: #6d28d9; }
+  .submit:disabled { opacity: .6; cursor: not-allowed; }
+  .msg {
+    margin-top: 18px; padding: 12px 16px; border-radius: 10px;
+    font-size: 14px; line-height: 1.5; display: none;
+  }
+  .msg.ok  { background: #d1fae5; color: #065f46; display: block; }
+  .msg.err { background: #fee2e2; color: #991b1b; display: block; }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid #fff;
+    border-top-color: transparent; border-radius: 50%;
+    animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PIN Popup Styles */
+  .pin-popup {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .pin-popup.hidden { display: none; }
+  .pin-card {
+    background: #fff; border-radius: 16px; padding: 32px 28px;
+    max-width: 380px; width: 90%; text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .pin-card h2 {
+    font-size: 18px; font-weight: 600; color: #111; margin-bottom: 8px;
+  }
+  .pin-card p {
+    font-size: 14px; color: #6b7280; margin-bottom: 24px; line-height: 1.5;
+  }
+  .pin-input {
+    width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb;
+    border-radius: 10px; font-size: 18px; text-align: center; font-weight: 600;
+    color: #111; background: #fafafa; outline: none; margin-bottom: 20px;
+    letter-spacing: 8px;
+  }
+  .pin-input:focus { border-color: #7c3aed; background: #fff; }
+  .pin-btn {
+    width: 100%; padding: 12px; background: #7c3aed; color: #fff;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 500;
+    cursor: pointer; transition: background .15s;
+  }
+  .pin-btn:hover:not(:disabled) { background: #6d28d9; }
+  .pin-btn:disabled { opacity: .6; cursor: not-allowed; }
+  .pin-error {
+    color: #dc2626; font-size: 14px; margin-top: 12px; display: none;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">
+    <img src="pi_innov.jpeg" alt="Pi Innovations Logo">
+  </div>
+  <div class="branding">
+    <div class="brand-name">PiGym</div>
+    <div class="powered-by">Powered by Pi Innovations Pvt Ltd</div>
+  </div>
+  <h1>Connect to Wi-Fi</h1>
+  <p class="sub">Select your network to get this device online</p>
+  <p class="sub">Make sure the Wifi Accesspoint is powered on and in range</p>
+
+  <div class="field">
+    <div class="row">
+      <label for="ssid" style="margin:0">Network</label>
+      <button class="scan-btn" type="button" onclick="scanNetworks()">↻ Scan again</button>
+    </div>
+    <select id="ssid" required>
+      <option value="">— scanning… —</option>
+    </select>
+  </div>
+
+  <div class="field" id="passField">
+    <label for="password">Password</label>
+    <div class="pass-wrap">
+      <input type="password" id="password" placeholder="Wi-Fi password" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button type="button" class="eye" onclick="togglePass()" title="Show/hide password">&#128065;</button>
+    </div>
+  </div>
+
+  <button class="submit" id="connectBtn" onclick="doConnect()">Connect</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<!-- PIN Verification Popup -->
+<div class="pin-popup hidden" id="pinPopup">
+  <div class="pin-card">
+    <h2>Device Verification</h2>
+    <p>Please enter the PIN code sent to your registered email/mobile to access the setup portal.</p>
+    <input type="text" class="pin-input" id="pinInput" maxlength="4" placeholder="0000">
+    <button class="pin-btn" id="pinBtn" onclick="verifyPin()">Verify PIN</button>
+    <div class="pin-error" id="pinError">Incorrect PIN. Please try again.</div>
+  </div>
+</div>
+<script>
+const ssidEl    = document.getElementById('ssid');
+const passEl    = document.getElementById('password');
+const passField = document.getElementById('passField');
+const btn       = document.getElementById('connectBtn');
+const msgEl     = document.getElementById('msg');
+
+// PIN popup elements
+const pinPopup  = document.getElementById('pinPopup');
+const pinInput  = document.getElementById('pinInput');
+const pinBtn    = document.getElementById('pinBtn');
+const pinError  = document.getElementById('pinError');
+
+let networkMeta = {};
+const CORRECT_PIN = '{{ pin_data }}';
+// const CORRECT_PIN = '4455';
+
+// Check if PIN has been verified before
+function checkPinVerification() {
+    console.log('Checking PIN verification status...');
+  const pinVerified = localStorage.getItem('pinVerified');
+  if (!pinVerified) {
+    console
+    pinPopup.classList.remove('hidden');
+    pinInput.focus();
+  }
+
+  console.log('PIN verification status:', pinVerified);
+}
+
+// Verify PIN function
+function verifyPin() {
+  const enteredPin = pinInput.value.trim();
+  if (enteredPin === CORRECT_PIN) {
+    localStorage.setItem('pinVerified', 'true');
+    pinPopup.classList.add('hidden');
+    pinError.style.display = 'none';
+  } else {
+    pinError.style.display = 'block';
+    pinInput.value = '';
+    pinInput.focus();
+  }
+}
+
+// Allow Enter key in PIN input
+pinInput.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    verifyPin();
+  }
+});
+
+// Initialize PIN check on page load
+checkPinVerification();
+
+async function scanNetworks() {
+  ssidEl.innerHTML = '<option value="">— scanning… —</option>';
+  btn.disabled = true;
+  try {
+    const res  = await fetch('/scan');
+    const nets = await res.json();
+    networkMeta = {};
+    if (!nets.length) {
+      ssidEl.innerHTML = '<option value="">No networks found — scan again</option>';
+    } else {
+      ssidEl.innerHTML = nets.map(n => {
+        networkMeta[n.ssid] = n;
+        const bars = signalBars(n.signal);
+        const lock = n.secure ? '🔒 ' : '';
+        return `<option value="${esc(n.ssid)}">${lock}${esc(n.ssid)}  ${bars} ${n.signal}%</option>`;
+      }).join('');
+    }
+  } catch {
+    ssidEl.innerHTML = '<option value="">Scan failed — try again</option>';
+  }
+  btn.disabled = false;
+  updatePassField();
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function signalBars(signal) {
+  const s = parseInt(signal) || 0;
+  if (s >= 75) return '▂▄▆█';
+  if (s >= 50) return '▂▄▆·';
+  if (s >= 25) return '▂▄··';
+  return '▂···';
+}
+
+function updatePassField() {
+  const meta = networkMeta[ssidEl.value];
+  passField.style.display = (meta && !meta.secure) ? 'none' : 'block';
+}
+
+ssidEl.addEventListener('change', updatePassField);
+
+function togglePass() {
+  passEl.type = passEl.type === 'password' ? 'text' : 'password';
+}
+
+function showMsg(type, text) {
+  msgEl.className = 'msg ' + type;
+  msgEl.innerHTML = text;
+}
+
+async function doConnect() {
+  const ssid     = ssidEl.value.trim();
+  const password = passEl.value;
+  if (!ssid) { showMsg('err', 'Please select a network.'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Connecting…';
+  msgEl.className = 'msg';
+
+  try {
+    const res  = await fetch('/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ssid, password })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showMsg('ok', '✓ Connected! The device will switch to your network. You can close this page.');
+      btn.innerHTML = 'Connect';
+    } else {
+      showMsg('err', '✗ ' + (data.message || 'Connection failed — check password and try again.'));
+      btn.disabled = false;
+      btn.innerHTML = 'Connect';
+    }
+  } catch {
+    showMsg('err', '✗ Could not reach device. Try again.');
+    btn.disabled = false;
+    btn.innerHTML = 'Connect';
+  }
+}
+
+scanNetworks();
+
+</script>
+</body>
+</html>

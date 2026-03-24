@@ -11,27 +11,12 @@ Behaviour:
 
 import os
 import sys
-import time
 import signal
 import logging
-import subprocess
-import threading
-
-import RPi.GPIO as GPIO
-from flask import Flask, request, jsonify, render_template_string, redirect
-
-# ─── Configuration ────────────────────────────────────────────────────────────
-
-BUTTON_PIN       = 17             # BCM GPIO pin for reset button
-BUTTON_HOLD_SEC  = 3              # seconds to hold for reset
-LED_PIN          = None           # BCM GPIO pin for status LED, or None
-AP_SSID          = "GymDevice-Setup"
-AP_PASSWORD      = "gymsetup"     # min 8 chars; "" for open network
-AP_IP            = "192.168.4.1"
-AP_INTERFACE     = "wlan0"
-PORTAL_PORT      = 80
-LOG_FILE         = "/var/log/wifi_manager.log"
-CONNECT_TIMEOUT  = 20             # seconds to wait for nmcli to connect
+from config import LOG_FILE, PORTAL_PORT
+from wifi import is_connected, get_saved_ssid, scan_networks, start_ap
+from gpio import setup_gpio, led_pattern, cleanup_gpio
+from web import app
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 
@@ -45,59 +30,39 @@ logging.basicConfig(
 )
 log = logging.getLogger("wifi_manager")
 
-# ─── Flask portal ─────────────────────────────────────────────────────────────
+# ─── Main ─────────────────────────────────────────────────────────────────────
 
-app = Flask(__name__)
+def shutdown(sig, frame):
+    log.info("Shutting down…")
+    from wifi import stop_ap
+    stop_ap()
+    led_pattern("off")
+    cleanup_gpio()
+    sys.exit(0)
 
-PORTAL_HTML = """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Device Wi-Fi Setup</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #f0f2f5; min-height: 100vh;
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-  }
-  .card {
-    background: #fff; border-radius: 16px; padding: 36px 28px;
-    max-width: 420px; width: 100%;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-  }
-  .icon {
-    width: 52px; height: 52px; background: #7c3aed; border-radius: 14px;
-    display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
-  }
-  h1 { font-size: 20px; font-weight: 600; color: #111; text-align: center; margin-bottom: 6px; }
-  .sub { font-size: 14px; color: #6b7280; text-align: center; margin-bottom: 28px; }
-  label { font-size: 13px; font-weight: 500; color: #374151; display: block; margin-bottom: 6px; }
-  select, input {
-    width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb;
-    border-radius: 10px; font-size: 15px; color: #111;
-    background: #fafafa; outline: none; transition: border-color .15s;
-    appearance: none;
-  }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-           background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-  select:focus, input:focus { border-color: #7c3aed; background: #fff; }
-  .field { margin-bottom: 18px; }
-  .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .scan-btn {
-    font-size: 12px; color: #7c3aed; cursor: pointer; background: none;
-    border: none; padding: 0; font-weight: 500;
-  }
-  .scan-btn:hover { text-decoration: underline; }
-  .pass-wrap { position: relative; }
-  .pass-wrap input { padding-right: 44px; }
-  .eye {
-    position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-    cursor: pointer; color: #9ca3af; font-size: 17px; user-select: none;
-    background: none; border: none; padding: 0; line-height: 1;
-  }
-  .signal { font-size: 11px; color: #9ca3af; }
+def main():
+    if os.geteuid() != 0:
+        sys.exit("ERROR: must run as root (sudo)")
+
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT,  shutdown)
+
+    setup_gpio()
+
+    if is_connected():
+        current = get_saved_ssid()
+        log.info(f"Already connected ({current}) — monitoring button for reset")
+        led_pattern("connected")
+    else:
+        log.info("No Wi-Fi — starting captive portal")
+        scan_networks()  # scan while radio is free
+        start_ap()       # then bring AP up
+
+    # Always run Flask — portal must be ready for button reset at any time
+    app.run(host="0.0.0.0", port=PORTAL_PORT, debug=False, threaded=True, use_reloader=False)
+
+if __name__ == "__main__":
+    main()
   .lock   { font-size: 11px; color: #d1d5db; margin-left: 4px; }
   .open   { font-size: 11px; color: #6ee7b7; margin-left: 4px; }
   .submit {

@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup_service.sh — Register wifi_manager as a systemd service
+# setup_service.sh — Install or uninstall wifi_manager as a systemd service
 # Run as root: sudo bash setup_service.sh
 
 set -e
@@ -10,6 +10,62 @@ warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 error()   { echo -e "${RED}[✗]${NC} $*"; exit 1; }
 heading() { echo -e "\n${YELLOW}━━━ $* ━━━${NC}"; }
 
+# ── Uninstall function ────────────────────────────────────────────────────────
+
+uninstall_service() {
+    heading "Stopping and removing service"
+
+    # Stop service if running
+    if systemctl is-active --quiet "${SERVICE_NAME}.service" 2>/dev/null; then
+        systemctl stop "${SERVICE_NAME}.service"
+        info "Service stopped"
+    else
+        info "Service not running"
+    fi
+
+    # Disable service
+    if systemctl is-enabled --quiet "${SERVICE_NAME}.service" 2>/dev/null; then
+        systemctl disable "${SERVICE_NAME}.service"
+        info "Service disabled"
+    else
+        info "Service not enabled"
+    fi
+
+    # Remove service file
+    if [ -f "$SERVICE_FILE" ]; then
+        rm -f "$SERVICE_FILE"
+        info "Service file removed: $SERVICE_FILE"
+    else
+        info "Service file not found"
+    fi
+
+    # Reload systemd
+    systemctl daemon-reload
+    info "Systemd daemon reloaded"
+
+    # Remove installation directory
+    if [ -d "$INSTALL_DIR" ]; then
+        rm -rf "$INSTALL_DIR"
+        info "Installation directory removed: $INSTALL_DIR"
+    else
+        info "Installation directory not found"
+    fi
+
+    # Remove log file
+    if [ -f "/var/log/wifi_manager.log" ]; then
+        rm -f "/var/log/wifi_manager.log"
+        info "Log file removed: /var/log/wifi_manager.log"
+    else
+        info "Log file not found"
+    fi
+
+    heading "Uninstallation complete"
+    echo ""
+    echo "  Wi-Fi Manager has been completely removed from the system."
+    echo "  You can reinstall by running this script again."
+    echo ""
+}
+
 [ "$(id -u)" -eq 0 ] || error "Run as root: sudo bash setup_service.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,6 +74,31 @@ INSTALL_DIR="/opt/wifi_manager"
 INSTALL_BIN="${INSTALL_DIR}/wifi_manager.py"
 SERVICE_NAME="wifi-manager"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+
+# ── Choose action ─────────────────────────────────────────────────────────────
+
+heading "Wi-Fi Manager Setup"
+echo ""
+echo "  1) Install service"
+echo "  2) Uninstall service"
+echo ""
+read -rp "Choose [1/2]: " ACTION_CHOICE
+
+case "$ACTION_CHOICE" in
+  1)
+    ACTION="install"
+    info "Installing Wi-Fi Manager service"
+    ;;
+  2)
+    ACTION="uninstall"
+    info "Uninstalling Wi-Fi Manager service"
+    uninstall_service
+    exit 0
+    ;;
+  *)
+    error "Invalid choice"
+    ;;
+esac
 
 # ── Choose Python environment ─────────────────────────────────────────────────
 
@@ -70,9 +151,9 @@ info "nmcli $(nmcli --version)"
 
 heading "Installing script"
 mkdir -p "$INSTALL_DIR"
-cp "$SCRIPT_SRC" "$INSTALL_BIN"
-chmod +x "$INSTALL_BIN"
-info "Copied to $INSTALL_BIN"
+cp "$SCRIPT_DIR"/*.py "$SCRIPT_DIR"/portal.html "$SCRIPT_DIR"/*.jpeg "$INSTALL_DIR"/
+chmod +x "${INSTALL_DIR}/wifi_manager.py"
+info "Copied scripts to $INSTALL_DIR"
 
 mkdir -p /var/log
 touch /var/log/wifi_manager.log
