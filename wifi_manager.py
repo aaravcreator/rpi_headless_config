@@ -59,12 +59,13 @@ def main():
         log.info(f"Already connected ({current}) — monitoring button for reset")
         led_pattern("connected")
     else:
-        log.info("No Wi-Fi — starting captive portal")
-        scan_networks()  # scan while radio is free
-        start_ap()       # then bring AP up
+        log.info("No Wi-Fi Connected")
+        # scan_networks()  # scan while radio is free
+        # start_ap()       # then bring AP up
 
     # Always run Flask — portal must be ready for button reset at any time
     app.run(host="0.0.0.0", port=PORTAL_PORT, debug=False, threaded=True, use_reloader=False)
+
 
 if __name__ == "__main__":
     main()
