@@ -78,6 +78,29 @@ To remove the Wi-Fi Manager service completely:
    - Remove the service file
    - Delete the installation directory (`/opt/wifi_manager/`)
    - Remove the log file (`/var/log/wifi_manager.log`)
+
+## Update
+
+To update the Wi-Fi Manager with the latest code and dependencies:
+
+1. Download the latest code to your local machine.
+
+2. Run the setup script:
+
+   ```bash
+   sudo bash setup_service.sh
+   ```
+
+3. Choose option 3 (Update service) when prompted.
+
+   The script will:
+   - Detect the existing Python environment (virtualenv or system Python)
+   - Stop the service temporarily
+   - Copy updated files
+   - Install or upgrade dependencies in the detected environment
+   - Restart the service
+
+   **No manual environment choice is needed** — the script automatically uses the same environment from the initial installation.
    - Reload systemd
 
 ## Usage
@@ -156,7 +179,7 @@ sudo python3 wifi_manager.py
 For development with auto-restart:
 
 ```bash
-sudo pip3 install flask RPi.GPIO
+sudo pip3 install flask rpi-lgpio
 sudo python3 wifi_manager.py
 ```
 

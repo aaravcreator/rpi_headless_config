@@ -10,6 +10,104 @@ warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 error()   { echo -e "${RED}[✗]${NC} $*"; exit 1; }
 heading() { echo -e "\n${YELLOW}━━━ $* ━━━${NC}"; }
 
+# ── Update function ──────────────────────────────────────────────────────────
+
+update_service() {
+    heading "Updating Wi-Fi Manager"
+
+    # Check if service is installed
+    if ! systemctl list-unit-files | grep -q "${SERVICE_NAME}.service"; then
+        error "Service not found. Please install first: sudo bash setup_service.sh"
+    fi
+
+    # Detect existing Python environment
+    if [ -f "${INSTALL_DIR}/venv/bin/python3" ]; then
+        PYTHON_BIN="${INSTALL_DIR}/venv/bin/python3"
+        PIP_BIN="${INSTALL_DIR}/venv/bin/pip"
+        USE_VENV=true
+        info "Detected virtualenv at ${INSTALL_DIR}/venv"
+    else
+        # Try to extract from service file
+        PYTHON_BIN=$(grep -oP 'ExecStart=\K[^ ]+' "$SERVICE_FILE" 2>/dev/null || echo "/usr/bin/python3")
+        if [[ "$PYTHON_BIN" == *"venv"* ]]; then
+            PIP_BIN="${INSTALL_DIR}/venv/bin/pip"
+            USE_VENV=true
+        else
+            PIP_BIN="${PYTHON_BIN%/*}/pip3"
+            [ -f "$PIP_BIN" ] || PIP_BIN="${PYTHON_BIN%/*}/pip"
+            USE_VENV=false
+        fi
+        info "Using existing Python: $PYTHON_BIN"
+    fi
+
+    [ -f "$PYTHON_BIN" ] || error "Python binary not found: $PYTHON_BIN"
+    info "Python verified: $PYTHON_BIN"
+
+    # Stop service
+    if systemctl is-active --quiet "${SERVICE_NAME}.service"; then
+        systemctl stop "${SERVICE_NAME}.service"
+        info "Service stopped"
+    fi
+
+    # Update scripts
+    heading "Updating scripts"
+    cp "$SCRIPT_DIR"/*.py "$SCRIPT_DIR"/portal.html "$SCRIPT_DIR"/*.jpeg "$INSTALL_DIR"/
+    chmod +x "${INSTALL_DIR}/wifi_manager.py"
+    info "Scripts updated at $INSTALL_DIR"
+
+    # Update dependencies
+    heading "Updating dependencies"
+    if [ "$USE_VENV" = true ]; then
+        "$PIP_BIN" install --upgrade pip
+        "$PIP_BIN" install --upgrade flask rpi-lgpio
+        info "flask and rpi-lgpio updated in venv"
+    else
+        if ! "$PYTHON_BIN" -c "import flask" 2>/dev/null; then
+            warn "Flask not found — installing…"
+            if [ "$PYTHON_BIN" = "/usr/bin/python3" ]; then
+                "$PIP_BIN" install flask --break-system-packages
+            else
+                "$PIP_BIN" install flask
+            fi
+        else
+            "$PIP_BIN" install --upgrade flask
+        fi
+        info "Flask ready"
+
+        if ! "$PYTHON_BIN" -c "import RPi.GPIO" 2>/dev/null; then
+            warn "RPi.GPIO not found — installing…"
+            if [ "$PYTHON_BIN" = "/usr/bin/python3" ]; then
+                "$PIP_BIN" install rpi-lgpio --break-system-packages
+            else
+                "$PIP_BIN" install rpi-lgpio
+            fi
+        else
+            "$PIP_BIN" install --upgrade rpi-lgpio
+        fi
+        info "RPi.GPIO ready"
+    fi
+
+    # Restart service
+    heading "Restarting service"
+    systemctl daemon-reload
+    systemctl start "${SERVICE_NAME}.service"
+    sleep 2
+
+    if systemctl is-active --quiet "${SERVICE_NAME}.service"; then
+        info "Service is running"
+    else
+        warn "Service not running — check logs"
+        journalctl -u "${SERVICE_NAME}" -n 20 --no-pager
+    fi
+
+    heading "Update complete!"
+    echo ""
+    echo "  Updated  : ${INSTALL_BIN}"
+    echo "  Python   : ${PYTHON_BIN}"
+    echo "  Service  : ${SERVICE_FILE}"
+    echo ""
+}
+
 # ── Uninstall function ────────────────────────────────────────────────────────
 
 uninstall_service() {
@@ -81,8 +179,9 @@ heading "Wi-Fi Manager Setup"
 echo ""
 echo "  1) Install service"
 echo "  2) Uninstall service"
+echo "  3) Update service"
 echo ""
-read -rp "Choose [1/2]: " ACTION_CHOICE
+read -rp "Choose [1/2/3]: " ACTION_CHOICE
 
 case "$ACTION_CHOICE" in
   1)
@@ -93,6 +192,12 @@ case "$ACTION_CHOICE" in
     ACTION="uninstall"
     info "Uninstalling Wi-Fi Manager service"
     uninstall_service
+    exit 0
+    ;;
+  3)
+    ACTION="update"
+    info "Updating Wi-Fi Manager service"
+    update_service
     exit 0
     ;;
   *)

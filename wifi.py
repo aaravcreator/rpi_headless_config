@@ -40,6 +40,38 @@ def get_saved_ssid():
         pass
     return None
 
+def reconnect_to_saved():
+    """Attempt to activate any saved Wi-Fi connections."""
+    from config import AP_INTERFACE
+    try:
+        log.info("Attempting to reconnect to saved networks…")
+        # List all saved Wi-Fi connections
+        r = nmcli("-t -f NAME,TYPE con show", check=False)
+        saved_wifi = []
+        for line in r.stdout.splitlines():
+            name, _, ctype = line.partition(":")
+            if "wireless" in ctype or "wifi" in ctype:
+                saved_wifi.append(name.strip())
+        
+        if not saved_wifi:
+            log.info("No saved Wi-Fi connections found")
+            return False
+        
+        # Try to activate the first saved connection
+        log.info(f"Activating saved connection: {saved_wifi[0]}")
+        result = nmcli(f'con up "{saved_wifi[0]}" ifname {AP_INTERFACE}', check=False, timeout=CONNECT_TIMEOUT + 5)
+        
+        if result.returncode == 0 and "successfully activated" in result.stdout:
+            log.info(f"Reconnected to '{saved_wifi[0]}'")
+            return True
+        else:
+            err = result.stderr.strip() or result.stdout.strip()
+            log.warning(f"Failed to reconnect to saved network: {err}")
+            return False
+    except Exception as e:
+        log.error(f"Error reconnecting to saved networks: {e}")
+        return False
+
 def delete_saved_wifi_connections():
     """Delete all saved Wi-Fi connections (leaves ethernet etc. untouched)."""
     try:

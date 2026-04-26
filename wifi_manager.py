@@ -12,9 +12,10 @@ Behaviour:
 import os
 import sys
 import signal
+import time
 import logging
 from config import LOG_FILE, PORTAL_PORT
-from wifi import is_connected, get_saved_ssid, scan_networks, start_ap
+from wifi import is_connected, get_saved_ssid, scan_networks, start_ap, reconnect_to_saved
 from gpio import setup_gpio, led_pattern, cleanup_gpio
 from web import app
 
@@ -49,6 +50,10 @@ def main():
 
     setup_gpio()
 
+    # Try to reconnect to saved networks first
+    reconnect_to_saved()
+    time.sleep(5)  # give connection time to stabilize
+    
     if is_connected():
         current = get_saved_ssid()
         log.info(f"Already connected ({current}) — monitoring button for reset")
