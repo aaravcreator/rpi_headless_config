@@ -51,8 +51,8 @@ def main():
     setup_gpio()
 
     # Try to reconnect to saved networks first
-    reconnect_to_saved()
-    time.sleep(5)  # give connection time to stabilize
+    # reconnect_to_saved()
+    time.sleep(10)  # give connection time to stabilize
     
     if is_connected():
         current = get_saved_ssid()
