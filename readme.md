@@ -1,6 +1,17 @@
 # Raspberry Pi Headless Wi-Fi Setup Manager
 
-A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberry Pi Zero 2 W with Raspberry Pi OS Bookworm+). This service automatically creates a captive portal access point when no Wi-Fi is configured, allowing users to connect and set up Wi-Fi through a web interface.
+A headless Wi-Fi configuration tool for Raspberry Pi devices (tested on Raspberry Pi Zero 2 W with Raspberry Pi OS Bookworm). This service automatically creates a captive portal access point when no Wi-Fi is configured, allowing users to connect and set up Wi-Fi through a web interface.
+
+## Compatibility
+
+- **Raspberry Pi OS Bookworm**: Tested
+- **Raspberry Pi OS Trixie**: Not tested
+
+## Reference Circuit Diagram
+
+The diagram shows the reset button connected to BCM GPIO 17 and the status LED connected to BCM GPIO 18 on **Raspberry Pi Zero 2 W**
+
+![Raspberry Pi headless setup reference circuit](rpi_headless_circuit.png)
 
 ## Features
 
@@ -29,7 +40,7 @@ The project is modularized for maintainability:
 ## Requirements
 
 - Raspberry Pi with Wi-Fi (e.g., Zero 2 W, 3B+, 4B)
-- Raspberry Pi OS Bookworm or later (uses NetworkManager)
+- Raspberry Pi OS Bookworm (tested; uses NetworkManager). Trixie has not been tested.
 - Python 3.7+
 - Root access for service installation
 
