@@ -144,7 +144,7 @@ Edit `config.py` to customize:
 - `BUTTON_HOLD_SEC`: Seconds to hold button for reset (default: 3)
 - `LED_PIN`: GPIO pin for status LED (default: None - disabled)
 - `AP_SSID`: Access point name (default: "GymDevice-Setup")
-- `AP_PASSWORD`: AP password (default: "gymsetup", min 8 chars)
+- `AP_PASSWORD`: AP password (default: "g**\*\*\***p", min 8 chars)
 - `AP_IP`: Portal IP address (default: "192.168.4.1")
 - `PORTAL_PORT`: Web server port (default: 80)
 
