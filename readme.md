@@ -119,7 +119,7 @@ To update the Wi-Fi Manager with the latest code and dependencies:
 ### First-Time Setup
 
 1. Power on the Raspberry Pi with no Ethernet cable.
-2. If no Wi-Fi is configured, it will create an access point named "GymDevice-Setup" (password: "gymsetup").
+2. If no Wi-Fi is configured, it will create an access point named "GymDevice-Setup" (password: "g**\*\*\***p").
 3. Connect to this network from your phone/tablet/computer.
 4. Open a web browser - you'll be redirected to the setup portal.
 5. Select your Wi-Fi network, enter the password, and click "Connect".
